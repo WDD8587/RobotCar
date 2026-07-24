@@ -1,0 +1,20 @@
+idf_component_register(
+    SRCS
+        main.c
+        spi_slave.c
+        motor_pid.c
+        encoder.c
+        imu.c
+        sensor_bridge.c
+    INCLUDE_DIRS
+        .
+        ../../shared
+    REQUIRES
+        esp_driver_spi
+        esp_driver_ledc
+        esp_driver_i2c
+        esp_driver_uart
+        esp_driver_pcnt
+        esp_timer
+)
+target_compile_options(${COMPONENT_LIB} PRIVATE -Wno-strict-aliasing)
