@@ -32,6 +32,7 @@
 #include "encoder.h"
 #include "imu.h"
 #include "sensor_bridge.h"
+#include "vacuum_fan.h"
 #include "protocol.h"
 
 static const char *TAG = "main";
@@ -82,6 +83,9 @@ void on_spi_frame_received(const uint8_t *rx_data, int len) {
     imu_get_yaw_gyro(&yaw, &gyro);
     g_telemetry.imu_yaw = yaw;
     g_telemetry.imu_gyro_z = gyro;
+
+    /* Fan RPM */
+    g_telemetry.fan_rpm = fan_get_rpm();
 
     xSemaphoreGive(g_spi_mutex);
 }
@@ -149,6 +153,18 @@ static void vSensorTask(void *arg) {
     }
 }
 
+/* ---- Fan monitor task (10 Hz, Core 1) ---- */
+static void vFanTask(void *arg) {
+    TickType_t last_wake = xTaskGetTickCount();
+    fan_init();
+    ESP_LOGI(TAG, "Fan task started on Core %d", xPortGetCoreID());
+
+    while (1) {
+        vTaskDelayUntil(&last_wake, pdMS_TO_TICKS(100));
+        fan_is_stalled();  /* anti-stall check */
+    }
+}
+
 /* ---- Main ---- */
 void app_main(void) {
     ESP_LOGI(TAG, "RobotCar ESP32-S3 Motor Controller");
@@ -170,6 +186,10 @@ void app_main(void) {
     xTaskCreatePinnedToCore(vSpiTask,   "spi",   4096, NULL, 5, NULL, 1);
     xTaskCreatePinnedToCore(vImuTask,   "imu",   2048, NULL, 4, NULL, 1);
     xTaskCreatePinnedToCore(vSensorTask,"sensor",2048, NULL, 3, NULL, 1);
+    xTaskCreatePinnedToCore(vFanTask,   "fan",   2048, NULL, 2, NULL, 1);
+
+    /* Fan speed controlled by motor command flags */
+    if (g_cmd.flags & 0x02) fan_set_power(80);  /* headlight bit = fan on */
 
     ESP_LOGI(TAG, "All tasks started");
 }

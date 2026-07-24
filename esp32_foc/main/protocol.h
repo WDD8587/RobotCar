@@ -58,11 +58,12 @@ typedef struct __attribute__((packed)) {
     uint16_t us_rear_mm;
     uint8_t  bumper;        /* bit0=left, bit1=right */
     uint8_t  battery_pct;   /* 0-100% */
+    uint16_t fan_rpm;       /* vacuum fan RPM */
     uint16_t crc;
 } telemetry_t;
 
 _Static_assert(sizeof(motor_cmd_t) == 15, "motor_cmd_t size");
-_Static_assert(sizeof(telemetry_t) == 22, "telemetry_t size");
+_Static_assert(sizeof(telemetry_t) == 24, "telemetry_t size");
 
 /* ===========================================================================
  * UART Protocol (STM32F103 -> ESP32-S3)
@@ -169,7 +170,8 @@ static inline void pack_telemetry(uint8_t *frame, const telemetry_t *t, uint8_t 
     *(uint16_t*)(frame + 16) = t->us_rear_mm;
     frame[18] = t->bumper;
     frame[19] = t->battery_pct;
-    *(uint16_t*)(frame + 20) = crc16_ibm(frame, 20);
+    *(uint16_t*)(frame + 20) = t->fan_rpm;
+    *(uint16_t*)(frame + 22) = crc16_ibm(frame, 22);
 }
 
 static inline int unpack_telemetry(const uint8_t *frame, telemetry_t *t) {

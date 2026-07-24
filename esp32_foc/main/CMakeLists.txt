@@ -6,6 +6,7 @@ idf_component_register(
         encoder.c
         imu.c
         sensor_bridge.c
+        vacuum_fan.c
     INCLUDE_DIRS
         .
         ../../shared
